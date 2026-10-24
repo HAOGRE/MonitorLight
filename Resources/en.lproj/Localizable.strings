@@ -1,0 +1,141 @@
+/* English. Keys are the Simplified Chinese source text; check with scripts/i18n.py check. */
+
+/* App */
+"光控" = "MonitorLight";
+"退出光控" = "Quit MonitorLight";
+"开发版" = "Development";
+"光控 %@ · 本地运行，不联网" = "MonitorLight %@ · Runs locally, offline";
+"显示器亮度" = "Display brightness";
+"未连接显示器" = "No display connected";
+"滚动调节亮度 · ⌃⌥B 打开面板" = "Scroll to adjust brightness · ⌃⌥B to open";
+
+/* Main panel */
+"亮度" = "Brightness";
+"音量" = "Volume";
+"显示器音量" = "Display volume";
+"软件" = "Software";
+"柔和" = "Soft";
+"日常" = "Normal";
+"明亮" = "Bright";
+"亮度 %d%%（按 %d）" = "Brightness %d%% (press %d)";
+"静音" = "Mute";
+"恢复音量" = "Unmute";
+"静音（M）" = "Mute (M)";
+"恢复音量（M）" = "Unmute (M)";
+"画面" = "Picture";
+"预设" = "Presets";
+"设置" = "Settings";
+"设置…" = "Settings…";
+"设置（⌘,）" = "Settings (⌘,)";
+"返回（Esc）" = "Back (Esc)";
+"不可用" = "Unavailable";
+"正在连接…" = "Connecting…";
+"正在应用…" = "Applying…";
+"未连接" = "Not connected";
+"软件调光" = "Software dimming";
+"显示器已锁定硬件亮度（通常由 B.I.+ 自动亮度、HDR 或当前图像模式导致），现以遮罩调暗画面。在显示器上关闭相应功能后，会自动恢复硬件调光。" = "The display has locked hardware brightness, usually because of B.I.+, HDR or the current picture mode, so MonitorLight is dimming with an overlay. Hardware dimming resumes automatically when you turn that off on the display.";
+"使用键盘亮度键需要辅助功能权限" = "Brightness keys require Accessibility permission";
+"前往设置" = "Open Settings";
+"未检测到外接显示器" = "No External Display Found";
+"请确认显示器已开启，并在显示器菜单中打开 DDC/CI。" = "Make sure the display is on and DDC/CI is turned on in its menu.";
+"检测显示器" = "Detect Displays";
+
+/* Picture page */
+"图像模式" = "Picture Mode";
+"低蓝光" = "Low Blue";
+"切换低蓝光场景会同时切换图像模式" = "Choosing a low blue scene also changes the picture mode.";
+"sRGB 与 Rec.709 在此显示器上为同一模式，无法分别选择" = "sRGB and Rec.709 are one mode on this display and can’t be selected separately.";
+"锐利度" = "Sharpness";
+"降低锐利度" = "Decrease Sharpness";
+"提高锐利度" = "Increase Sharpness";
+"关" = "Off";
+"高" = "High";
+"高级" = "Premium";
+"动态画面建议选“高”；“高级”可能产生过冲残影" = "High suits fast motion. Premium can cause overshoot artifacts.";
+"显示比例" = "Scaling";
+"全屏" = "Full";
+"按比例" = "Aspect";
+"正在读取…" = "Reading…";
+"HDR、影院 HDR 和 B.I.+ 请在显示器菜单中调整。" = "Adjust HDR, Cinema HDR and B.I.+ in the display’s own menu.";
+"标准" = "Standard";
+"低蓝光 · 多媒体" = "Low Blue · Multimedia";
+"低蓝光 · 网上冲浪" = "Low Blue · Web Surfing";
+"低蓝光 · 办公室" = "Low Blue · Office";
+"低蓝光 · 阅读" = "Low Blue · Reading";
+"多媒体" = "Multimedia";
+"网上冲浪" = "Web Surfing";
+"办公室" = "Office";
+"阅读" = "Reading";
+"游戏" = "Game";
+"照片" = "Photo";
+"省电" = "ECO";
+"用户" = "User";
+"HDR 或显示器专用模式" = "HDR or Display-Only Mode";
+"未识别的模式" = "Unrecognized Mode";
+
+/* Settings page */
+"调光方式" = "Dimming";
+"自动" = "Auto";
+"硬件" = "Hardware";
+"优先调节显示器背光；显示器不接受时自动改用软件遮罩。" = "Adjusts the backlight when the display allows it, and dims with a software overlay when it doesn’t.";
+"仅通过 DDC/CI 调节背光；失败时给出提示，不改用遮罩。" = "Adjusts the backlight over DDC/CI only, and shows an error instead of falling back to the overlay.";
+"用半透明遮罩调暗画面，背光亮度不变；截图和录屏中可能看到遮罩。" = "Dims the picture with a translucent overlay. The backlight doesn’t change, and screenshots or recordings may show the overlay.";
+"使用键盘亮度键" = "Use Brightness Keys";
+"需要辅助功能权限" = "Requires Accessibility permission";
+"显示百分比" = "Show Percentage";
+"亮度 %d%%" = "Brightness %d%%";
+"登录时打开" = "Open at Login";
+"快捷键" = "Shortcuts";
+"全局" = "Global";
+"亮度 ±5%" = "Brightness ±5%";
+"亮度 ±1%" = "Brightness ±1%";
+"音量 ±5%" = "Volume ±5%";
+"静音 / 恢复" = "Mute / Unmute";
+"打开 / 收起面板" = "Show / Hide Panel";
+"在面板中可直接用方向键、1–3 和 M 操作；在菜单栏图标上滚动也可调节亮度。" = "In the panel, use the arrow keys, 1–3 and M. You can also scroll over the menu bar icon to adjust brightness.";
+"复制诊断" = "Copy Diagnostics";
+"已复制" = "Copied";
+"退出" = "Quit";
+
+/* Status and errors */
+"未发现外接显示器。连接后会自动检测。" = "No external display found. It’s detected automatically when connected.";
+"显示器不支持此项设置。" = "The display doesn’t support this setting.";
+"暂时无法读取此项设置。" = "Can’t read this setting right now.";
+"显示器已断开，请重新检测。" = "The display is disconnected. Try detecting it again.";
+"亮度 · 软件调光" = "Brightness · Software";
+"显示器未接受硬件亮度，已改用软件调光。" = "The display didn’t accept hardware brightness, so software dimming is on.";
+"显示器未响应硬件亮度，已改用软件调光。" = "The display didn’t respond to hardware brightness, so software dimming is on.";
+"%@未生效" = "%@ didn’t apply";
+"暂时无法调节%@" = "Can’t adjust %@ right now";
+"%@暂不可用" = "%@ is unavailable";
+"请在“系统设置 › 通用 › 登录项与扩展”中允许光控。" = "Allow MonitorLight in System Settings › General › Login Items & Extensions.";
+"无法更改“登录时打开”：%@" = "Couldn’t change Open at Login: %@";
+"无法找到当前显示器，请重新检测。" = "Can’t find this display. Try detecting it again.";
+"正在检查亮度键…" = "Checking brightness keys…";
+"显示器未确认此设置。" = "The display didn’t confirm this setting.";
+"显示器响应超时，请检查连接线后重试。" = "The display didn’t respond in time. Check the cable, then try again.";
+"无法连接显示器，请重新检测。" = "Can’t connect to the display. Try detecting it again.";
+
+/* Keyboard */
+"键盘亮度键已启用。如果按键发送的是 F1/F2，请同时按住 Fn。" = "Brightness keys are on. If your keyboard sends F1/F2, hold Fn.";
+"光控尚未获得辅助功能权限。如果系统设置中已打开，请将其关闭后再打开，然后点按“前往设置”重新连接。" = "MonitorLight doesn’t have Accessibility permission yet. If it’s already on in System Settings, turn it off and on again, then click Open Settings to reconnect.";
+"已获得辅助功能权限，但亮度键监听未能启动。请重新连接；如仍失败，请退出并重新打开光控。" = "Accessibility permission is on, but brightness keys couldn’t start. Reconnect, or quit and reopen MonitorLight.";
+"已停用键盘亮度键。⌃⌥↑/↓ 快捷键仍可使用。" = "Brightness keys are off. ⌃⌥↑/↓ still works.";
+"无法注册全局快捷键，请重新打开光控。" = "Couldn’t register global shortcuts. Reopen MonitorLight.";
+"部分快捷键已被其他应用占用。请停用冲突的快捷键，然后重新打开光控。" = "Another app is using some of these shortcuts. Turn off the conflicting shortcuts, then reopen MonitorLight.";
+
+/* DDC helper (translated in the app) */
+"外接显示器" = "External Display";
+"无法验证显示器返回的数据，请在显示器唤醒后重新检测。" = "Couldn’t verify the display’s reply. Wake the display, then try detecting it again.";
+"显示器未返回此项的有效数值。请先确认能否在显示器菜单中调节此项；B.I.+、HDR 或图像模式可能会锁定它。" = "The display didn’t return a valid value. Check whether this can be changed in the display’s menu; B.I.+, HDR or the picture mode may lock it.";
+"显示器不支持此项控制。" = "The display doesn’t support this control.";
+"显示器没有返回有效数据。请检查显示器菜单中的 DDC/CI、HDR 或自动亮度设置，以及连接线。" = "The display didn’t return valid data. Check DDC/CI, HDR and auto-brightness in its menu, and the cable.";
+"无法创建显示器通信锁。请检查用户缓存目录权限。" = "Couldn’t create the display lock. Check permissions on your Caches folder.";
+"显示器正忙，请稍后重试。" = "The display is busy. Try again in a moment.";
+"参数不正确。" = "Invalid arguments.";
+"此连接不支持 DDC/CI。请改用 USB-C 或 DisplayPort 直连显示器。" = "This connection doesn’t support DDC/CI. Connect the display directly over USB-C or DisplayPort.";
+"此显示器暂不支持画面设置。" = "Picture settings aren’t available for this display yet.";
+"未知设置项。" = "Unknown setting.";
+"该数值超出了显示器支持的范围。" = "The value is outside the range the display supports.";
+"无法与显示器通信，请稍后重试。" = "Couldn’t communicate with the display. Try again in a moment.";
+"设置已发送，但尚未确认生效，请稍后再查看。" = "The setting was sent but hasn’t been confirmed yet. Check again in a moment.";

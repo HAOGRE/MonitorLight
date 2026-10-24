@@ -1,0 +1,9 @@
+build/
+.build.noindex/
+.DS_Store
+*.xcuserstate
+__pycache__/
+# Local scratch: debugging binaries, downloaded vendor pages and personal photos
+research/experiments/
+# Personal development notes
+开发过程总结.md
