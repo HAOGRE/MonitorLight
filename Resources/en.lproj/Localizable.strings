@@ -13,6 +13,8 @@
 "亮度" = "Brightness";
 "音量" = "Volume";
 "显示器音量" = "Display volume";
+"信号源" = "Input Source";
+"未知信号源" = "Unknown input";
 "软件" = "Software";
 "柔和" = "Soft";
 "日常" = "Normal";

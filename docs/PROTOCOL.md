@@ -21,6 +21,24 @@ does not supply a verified complete picture-mode mapping.
 [BenQ specifications](https://www.benq.com/en-ph/monitor/home/ew3270u/spec.html)
 list both sRGB and Rec.709, but do not document their DDC encoding.
 
+## Input source (VCP 0x60)
+
+EW3270U source labels must use this model's connector mapping. A generic
+MCCS DisplayPort-1/2 interpretation swapped DP and USB-C in the first UI.
+
+| Connector | Decimal value | Evidence |
+| --- | ---: | --- |
+| DisplayPort | 16 | User confirmed the physical DP connection; independent read returned 16 |
+| USB-C | 15 | User reconnected USB-C and confirmed the label; independent read returned 15 |
+| HDMI 1 | 17 | Conventional HDMI value; physical connector not yet verified |
+| HDMI 2 | 18 | Conventional HDMI value; physical connector not yet verified |
+
+Both observed source replies reported maximum 18. The actual DDCClient and
+installed helper successfully selected 16 from 15, returning `verified:true`;
+a fresh helper also read 16. A restoration process retained the original
+transport across the transition, sent 15 once, and a fresh helper read 15.
+The source command is verified; availability of video on every port is not.
+
 ## Picture mode readbacks (VCP 0xDC)
 
 | Physical menu selection | Decimal readback | Evidence |

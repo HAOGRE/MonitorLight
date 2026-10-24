@@ -148,6 +148,51 @@ func probe(_ brightness: Int = 70) -> [String: Any] {
         assert(advanced.currentPictureModeID == "game")
         settingsClient.reply(["picture-mode": ["current": 5, "maximum": 1043]])
 
+        // Input changes stay at the last confirmed value until the display
+        // acknowledges the exact target. A failed/stale reply cannot relabel it.
+        let inputClient = FakeDDC(), inputs = DisplaySettingsModel(client: inputClient)
+        let inputDisplay = DisplayInfo(id: 99996, uuid: "test-input", name: "BenQ EW3270U", ddc: true)
+        inputs.configure(display: inputDisplay)
+        inputClient.reply(["input-source": ["current": 16, "maximum": 18]])
+        assert(inputs.currentInputSource?.title == "DisplayPort")
+        inputs.selectInputSource(value: 16)
+        inputs.selectInputSource(value: 27)
+        assert(inputClient.calls.isEmpty)
+        var writeNotification = false
+        inputs.onChange = { if inputs.isWriting { writeNotification = true } }
+        inputs.selectInputSource(value: 17)
+        assert(writeNotification && inputs.isWriting && inputs.values["input-source"]?.current == 16)
+        assert(inputClient.calls[0].0 == ["set", "test-input", "input-source", "17"])
+        inputs.selectInputSource(value: 18)
+        assert(inputClient.calls.count == 1) // do not queue duplicate changes
+        inputClient.fail()
+        assert(inputs.values["input-source"]?.current == 16 && inputs.error != nil)
+        inputClient.reply(["input-source": ["current": 16, "maximum": 18]])
+        inputs.selectInputSource(value: 17)
+        inputClient.reply(["current": 16, "maximum": 18]) // mismatched readback
+        assert(inputs.values["input-source"]?.current == 16 && inputs.error != nil)
+        inputClient.reply(["input-source": ["current": 16, "maximum": 18]])
+        inputs.selectInputSource(value: 17)
+        inputClient.reply(["current": 17, "maximum": 18, "verified": true])
+        assert(inputs.currentInputSource?.title == "HDMI 1" && inputs.error == nil)
+        inputClient.reply(["input-source": ["current": 17, "maximum": 18]])
+        inputs.refresh()
+        inputs.selectInputSource(value: 16) // explicit choice during background read
+        assert(inputClient.calls.count == 2 && inputs.isWriting)
+        inputClient.reply(["input-source": ["current": 18, "maximum": 18]])
+        assert(inputs.values["input-source"]?.current == 17 && inputs.isWriting)
+        inputClient.reply(["current": 16, "maximum": 18])
+        assert(inputs.currentInputSource?.title == "DisplayPort")
+        inputClient.reply(["input-source": ["current": 16, "maximum": 18]])
+        inputs.refresh()
+        inputClient.reply(["input-source": ["current": 18, "maximum": 18]])
+        assert(inputs.currentInputSource?.title == "HDMI 2") // physical change
+        inputs.selectInputSource(value: 16)
+        inputs.configure(display: nil)
+        inputClient.reply(["current": 16, "maximum": 18])
+        assert(inputs.values.isEmpty && !inputs.supported && !inputs.isWriting)
+        print("Input source tests passed: exact readback, failure, external change, stale display, write notification")
+
         // A physical mode change must reconsider an automatic software fallback,
         // even when another refresh was already in flight. No writes are needed.
         let syncClient = FakeDDC(), shade = FakeDimming()

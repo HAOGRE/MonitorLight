@@ -6,7 +6,8 @@ private final class PreviewDDC: DDCProviding {
         let values = ["picture-mode": ["current": 531, "maximum": 1043],
                       "sharpness": ["current": 5, "maximum": 10],
                       "response-time": ["current": 1, "maximum": 2],
-                      "aspect-ratio": ["current": 2, "maximum": 5]]
+                      "aspect-ratio": ["current": 2, "maximum": 5],
+                      "input-source": ["current": 16, "maximum": 18]]
         completion(.success(try! JSONSerialization.data(withJSONObject: values)))
     }
 }

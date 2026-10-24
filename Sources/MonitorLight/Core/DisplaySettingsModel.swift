@@ -12,6 +12,12 @@ struct PictureMode: Identifiable, Equatable {
     var isLowBlueLight: Bool { ["multimedia", "web", "office", "reading"].contains(id) }
 }
 
+struct InputSource: Identifiable {
+    let value: Int
+    let title: String
+    var id: Int { value }
+}
+
 /// Model-specific controls. Only confirmed readbacks replace visible state.
 final class DisplaySettingsModel: ObservableObject {
     @Published private(set) var values: [String: DDCValue] = [:]
@@ -45,6 +51,16 @@ final class DisplaySettingsModel: ObservableObject {
     ]
     var currentMode: PictureMode? { modes.first { $0.value == values["picture-mode"]?.current } }
     static var lowBlueScenes: [PictureMode] { knownModes.filter(\.isLowBlueLight) }
+    static let inputSources: [InputSource] = [
+        // EW3270U's physical DP connector reports 0x10, not MCCS DP-1 (0x0f).
+        .init(value: 0x10, title: "DisplayPort"),
+        .init(value: 0x0f, title: "USB-C"),
+        .init(value: 0x11, title: "HDMI 1"),
+        .init(value: 0x12, title: "HDMI 2")
+    ]
+    var currentInputSource: InputSource? {
+        Self.inputSources.first { $0.value == values["input-source"]?.current }
+    }
     var pictureModeChoices: [PictureMode] {
         var choices = modes.filter { !$0.isLowBlueLight }
         choices.insert(.init(id: "lowblue", title: "低蓝光", value: lastLowBlueValue), at: min(1, choices.count)) // i18n-key
@@ -83,6 +99,10 @@ final class DisplaySettingsModel: ObservableObject {
         guard let mode = pictureModeChoices.first(where: { $0.id == id }) else { return }
         set("picture-mode", value: mode.value)
     }
+    func selectInputSource(value: Int) {
+        guard Self.inputSources.contains(where: { $0.value == value }) else { return }
+        set("input-source", value: value)
+    }
     private func rememberLowBlueScene() {
         guard let mode = currentMode, mode.isLowBlueLight, !uuid.isEmpty else { return }
         lastLowBlueValue = mode.value
@@ -115,8 +135,12 @@ final class DisplaySettingsModel: ObservableObject {
         }
     }
     func set(_ feature: String, value: Int) {
-        guard !isWriting, !isLoading, let old = values[feature], old.current != value else { return }
+        // An explicit source choice takes precedence over an older background
+        // read. Its revision prevents that read from overwriting the choice.
+        guard !isWriting, (!isLoading || feature == "input-source"),
+              let old = values[feature], old.current != value else { return }
         isWriting = true; error = nil; revision += 1
+        onChange?()
         let token = generation
         client.perform(["set", uuid, feature, String(value)]) { [weak self] result in
             guard let self, token == self.generation else { return }

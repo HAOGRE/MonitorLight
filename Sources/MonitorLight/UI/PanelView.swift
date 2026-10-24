@@ -69,6 +69,7 @@ struct MainPage: View {
                 if let notice { NoticeBanner(text: notice) }
                 brightnessModule
                 volumeModule
+                InputSourceModule(model: model.displaySettings)
                 if model.displaySettings.supported { pictureRow }
                 if model.mediaKeysRequested && !model.mediaKeysEnabled { mediaKeyBanner }
                 footer
@@ -223,6 +224,50 @@ struct MainPage: View {
             }
         }
         .modifier(Shimmer())
+    }
+}
+
+// Observe the input state directly so reads and writes update the menu without
+// waiting for an unrelated brightness/volume publication from MonitorModel.
+struct InputSourceModule: View {
+    @ObservedObject var model: DisplaySettingsModel
+
+    var body: some View {
+        let settings = model
+        let selected = settings.currentInputSource
+        if settings.supported && settings.values["input-source"] != nil {
+            Module {
+                HStack(spacing: 8) {
+                    ModuleHeader(title: L("信号源")) { }
+                    Spacer(minLength: 0)
+                    Menu {
+                        ForEach(DisplaySettingsModel.inputSources) { source in
+                            Button {
+                                settings.selectInputSource(value: source.value)
+                            } label: {
+                                if selected?.value == source.value {
+                                    Label(source.title, systemImage: "checkmark")
+                                } else {
+                                    Text(source.title)
+                                }
+                            }
+                            .disabled(settings.isWriting)
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(selected?.title ?? L("未知信号源"))
+                            Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold))
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .accessibilityLabel(L("信号源"))
+                    .disabled(settings.isWriting)
+                }
+                if let error = settings.error { InlineError(text: error) }
+            }
+        }
     }
 }
 

@@ -76,6 +76,7 @@ static uint8_t featureCode(NSString *feature) {
     if ([feature isEqual:@"gamma"]) return 0x72;
     if ([feature isEqual:@"response-time"]) return 0xf0;
     if ([feature isEqual:@"aspect-ratio"]) return 0x86;
+    if ([feature isEqual:@"input-source"]) return 0x60;
     return 0;
 }
 static BOOL allowedValue(uint8_t code, long value) {
@@ -87,6 +88,8 @@ static BOOL allowedValue(uint8_t code, long value) {
         case 0x72: return value == 80 || value == 100 || value == 120 || value == 140 || value == 160;
         case 0xf0: return value >= 0 && value <= 2;
         case 0x86: return value == 1 || value == 2 || value == 5;
+        // EW3270U input encodings: USB-C=15, DisplayPort=16, HDMI 1/2=17/18.
+        case 0x60: return value >= 0x0f && value <= 0x12;
         default: return YES;
     }
 }
@@ -139,7 +142,7 @@ static int run(int argc, char **argv) {
     if (probe || settings) {
         NSMutableDictionary *result = [NSMutableDictionary dictionary];
         if (settings && !benqReadGuard) return fail(@"此显示器暂不支持画面设置。");
-        NSArray *features = settings ? @[@"picture-mode", @"sharpness", @"response-time", @"aspect-ratio"]
+        NSArray *features = settings ? @[@"picture-mode", @"sharpness", @"response-time", @"aspect-ratio", @"input-source"]
                                     : @[@"brightness", @"volume"];
         for (NSString *feature in features) {
             MLValue value = {};
