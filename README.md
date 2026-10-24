@@ -1,6 +1,6 @@
 # MonitorLight for BenQ EW3270U
 
-[简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) · [Blog post: why I built it](https://blog.haogre.com/en/2026/10/24/i-brought-my-benq-ew3270u-home-and-wrote-it-a-menu-bar-remote/)
 
 A small macOS menu bar app built for the **BenQ EW3270U** (31.5″ 4K, model ID BNQ7950). It controls the display's **brightness, speaker volume and picture settings** from your Mac, so you don't have to reach for the buttons on the back of the display. Other DDC/CI displays get brightness and volume.
 

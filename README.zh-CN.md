@@ -1,6 +1,6 @@
 # 光控 MonitorLight · 专为 BenQ EW3270U 打造
 
-[English](README.md)
+[English](README.md) · [开发故事：显示器搬回家后，我给它写了个菜单栏遥控器](https://blog.haogre.com/2026/10/24/显示器搬回家后，我给它写了个菜单栏遥控器/)
 
 一个 macOS 菜单栏小工具，专为 **BenQ 明基 EW3270U**（31.5 英寸 4K，型号代码 BNQ7950）开发。在 Mac 上直接调节显示器的**亮度、音量和画面设置**，不用再摸显示器背后的按键。其他支持 DDC/CI 的显示器也能调亮度和音量。
 
