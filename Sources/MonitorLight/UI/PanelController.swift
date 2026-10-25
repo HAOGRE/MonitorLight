@@ -6,6 +6,8 @@ enum PanelPage: Equatable { case main, picture, settings }
 /// Navigation state shared by the SwiftUI pages and keyboard handling.
 final class PanelState: ObservableObject {
     @Published var page: PanelPage = .main
+    /// Whether the panel is on screen; looping animations run only then.
+    @Published var isVisible = false
     func go(_ page: PanelPage) {
         guard page != self.page else { return }
         withAnimation(Motion.page) { self.page = page }
@@ -97,6 +99,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         self.anchor = anchor
         guard !isShown else { panel.makeKey(); return }
         state.page = .main
+        state.isVisible = true
         onShow?()
         let target = frame(height: contentHeight)
         let offset: CGFloat = Motion.reduced ? 0 : 6
@@ -123,6 +126,7 @@ final class PanelController: NSObject, NSWindowDelegate {
             guard let self, self.panel.alphaValue == 0 else { return }
             self.panel.orderOut(nil)
             self.state.page = .main
+            self.state.isVisible = false
         }
     }
     func windowDidResignKey(_ notification: Notification) {

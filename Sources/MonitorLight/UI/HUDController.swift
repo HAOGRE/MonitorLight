@@ -17,24 +17,62 @@ private struct HUDView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 5) {
                 Text(state.title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.primary.opacity(0.14))
-                        Capsule().fill(Color.primary.opacity(0.9))
-                            .frame(width: max(5, geometry.size.width * min(100, max(0, state.percent)) / 100))
-                    }
-                }
-                .frame(height: 5)
-                .animation(Motion.snappy, value: state.percent)
+                LevelBar(percent: state.percent).frame(height: 5)
             }
+            // No SwiftUI animations here: the HUD updates on every key press,
+            // and each SwiftUI animation frame re-renders the whole hosting view.
             Text("\(Int(state.percent.rounded()))")
                 .font(.system(size: 14, weight: .semibold, design: .rounded)).monospacedDigit()
-                .contentTransition(.numericText(value: state.percent))
-                .animation(Motion.snappy, value: Int(state.percent.rounded()))
                 .frame(width: 30, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .frame(width: 260, height: 50)
+    }
+}
+
+/// Capsule level bar whose fill eases in Core Animation, off the main thread.
+private struct LevelBar: NSViewRepresentable {
+    let percent: Double
+    final class BarView: NSView {
+        let track = CALayer(), fill = CALayer()
+        var fraction: CGFloat = 0
+        override init(frame: NSRect) {
+            super.init(frame: frame)
+            wantsLayer = true
+            layer?.addSublayer(track); layer?.addSublayer(fill)
+        }
+        required init?(coder: NSCoder) { fatalError() }
+        override func layout() {
+            super.layout()
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            track.frame = bounds
+            track.cornerRadius = bounds.height / 2; fill.cornerRadius = bounds.height / 2
+            fill.frame.size.height = bounds.height
+            CATransaction.commit()
+            updateColors(); updateFill(animated: false)
+        }
+        override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); updateColors() }
+        func updateColors() {
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                track.backgroundColor = NSColor.labelColor.withAlphaComponent(0.14).cgColor
+                fill.backgroundColor = NSColor.labelColor.withAlphaComponent(0.9).cgColor
+            }
+        }
+        func updateFill(animated: Bool) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(!animated || Motion.reduced)
+            CATransaction.setAnimationDuration(0.24)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.25, 1))
+            fill.frame = CGRect(x: 0, y: 0, width: max(5, bounds.width * fraction), height: bounds.height)
+            CATransaction.commit()
+        }
+    }
+    func makeNSView(context: Context) -> BarView { BarView() }
+    func updateNSView(_ view: BarView, context: Context) {
+        let next = CGFloat(min(100, max(0, percent)) / 100)
+        guard next != view.fraction else { return }
+        view.fraction = next
+        view.updateFill(animated: view.window?.isVisible == true)
     }
 }
 

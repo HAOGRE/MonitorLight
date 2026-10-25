@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct PanelActions {
@@ -38,6 +39,10 @@ struct PanelView: View {
         .background(GeometryReader { Color.clear.preference(key: HeightKey.self, value: $0.size.height) })
         .onPreferenceChange(HeightKey.self) { onHeight($0) }
         .frame(maxHeight: .infinity, alignment: .top)
+        .environment(\.panelVisible, state.isVisible)
+        // Keyboard and scroll adjustments still update the hidden panel; with
+        // animations they would re-render it every frame for nothing.
+        .transaction { if !state.isVisible { $0.disablesAnimations = true; $0.animation = nil } }
     }
     private func pageTransition(forward: Bool) -> AnyTransition {
         guard !Motion.reduced else { return .opacity }
@@ -218,12 +223,11 @@ struct MainPage: View {
         VStack(spacing: 10) {
             ForEach(0..<2, id: \.self) { _ in
                 Module {
-                    RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.08)).frame(width: 60, height: 12)
-                    Capsule().fill(Color.primary.opacity(0.08)).frame(height: 30)
+                    Placeholder(shape: .roundedRect(4)).frame(width: 60, height: 12)
+                    Placeholder(shape: .capsule).frame(height: 30)
                 }
             }
         }
-        .modifier(Shimmer())
     }
 }
 
@@ -276,17 +280,94 @@ struct InputSourceModule: View {
 struct StatusDot: View {
     let color: Color
     var pulsing = false
-    @State private var phase = false
+    @Environment(\.panelVisible) private var visible
     var body: some View {
+        // The ring is inserted only while pulsing so its endless animation is
+        // destroyed with it. Re-arming one persistent view stacked a new
+        // repeatForever animation per loading cycle, pegging the CPU.
         Circle().fill(color).frame(width: 6, height: 6)
-            .overlay(Circle().stroke(color.opacity(0.5), lineWidth: 1).scaleEffect(phase ? 2.2 : 1).opacity(phase ? 0 : 0.8))
-            .onAppear { animate() }
-            .onChange(of: pulsing) { _, _ in animate() }
+            .overlay { if pulsing && visible && !Motion.reduced { PulseRing(color: color) } }
     }
-    private func animate() {
-        guard pulsing, !Motion.reduced else { phase = false; return }
-        phase = false
-        withAnimation(.easeOut(duration: 1.1).repeatForever(autoreverses: false)) { phase = true }
+}
+
+private struct PulseRing: View {
+    let color: Color
+    var body: some View {
+        LoopingLayer(shape: .ring, color: color, animation: {
+            let scale = CABasicAnimation(keyPath: "transform.scale")
+            scale.fromValue = 1; scale.toValue = 2.2
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 0.8; fade.toValue = 0
+            let group = CAAnimationGroup()
+            group.animations = [scale, fade]
+            group.duration = 1.1
+            group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            return group
+        }())
+    }
+}
+
+/// A looping animation run by Core Animation in the render server. A SwiftUI
+/// repeatForever animation re-renders the whole panel every frame instead,
+/// which costs a full CPU core even for a 6pt dot.
+struct LoopingLayer: NSViewRepresentable {
+    enum Shape { case ring, roundedRect(CGFloat), capsule }
+    let shape: Shape
+    let color: Color
+    let animation: CAAnimation
+
+    final class LayerView: NSView {
+        let shapeLayer = CAShapeLayer()
+        var shape = Shape.capsule
+        var color = Color.clear
+        override init(frame: NSRect) {
+            super.init(frame: frame)
+            wantsLayer = true
+            layer?.masksToBounds = false
+            layer?.addSublayer(shapeLayer)
+        }
+        required init?(coder: NSCoder) { fatalError() }
+        override var isFlipped: Bool { true }
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func layout() {
+            super.layout()
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            shapeLayer.bounds = bounds
+            shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+            switch shape {
+            case .ring: shapeLayer.path = CGPath(ellipseIn: bounds.insetBy(dx: 0.5, dy: 0.5), transform: nil)
+            case .roundedRect(let radius):
+                shapeLayer.path = CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil)
+            case .capsule:
+                let radius = min(bounds.width, bounds.height) / 2
+                shapeLayer.path = CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil)
+            }
+            CATransaction.commit()
+            updateColors()
+        }
+        override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); updateColors() }
+        func updateColors() {
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                let resolved = NSColor(color).cgColor
+                if case .ring = shape {
+                    shapeLayer.fillColor = nil; shapeLayer.strokeColor = resolved; shapeLayer.lineWidth = 1
+                } else {
+                    shapeLayer.fillColor = resolved; shapeLayer.strokeColor = nil
+                }
+            }
+        }
+    }
+    func makeNSView(context: Context) -> LayerView {
+        let view = LayerView()
+        view.shape = shape; view.color = color
+        animation.repeatCount = .infinity
+        animation.isRemovedOnCompletion = false
+        view.shapeLayer.add(animation, forKey: "loop")
+        return view
+    }
+    func updateNSView(_ view: LayerView, context: Context) {
+        view.shape = shape; view.color = color
+        view.needsLayout = true
     }
 }
 
@@ -392,15 +473,34 @@ struct EmptyState: View {
     }
 }
 
-/// Soft breathing placeholder while the display is read.
-struct Shimmer: ViewModifier {
-    @State private var dim = false
-    func body(content: Content) -> some View {
-        content
-            .opacity(dim ? 0.45 : 1)
-            .onAppear {
-                guard !Motion.reduced else { return }
-                withAnimation(.easeInOut(duration: 0.9).repeatForever()) { dim = true }
+/// Skeleton bar that breathes softly while the display is read, only while
+/// the panel is on screen.
+struct Placeholder: View {
+    let shape: LoopingLayer.Shape
+    @Environment(\.panelVisible) private var visible
+    var body: some View {
+        if visible && !Motion.reduced {
+            LoopingLayer(shape: shape, color: Color.primary.opacity(0.08), animation: {
+                let breathe = CABasicAnimation(keyPath: "opacity")
+                breathe.fromValue = 1; breathe.toValue = 0.45
+                breathe.duration = 0.9; breathe.autoreverses = true
+                breathe.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                return breathe
+            }())
+        } else {
+            switch shape {
+            case .roundedRect(let radius): RoundedRectangle(cornerRadius: radius).fill(Color.primary.opacity(0.08))
+            default: Capsule().fill(Color.primary.opacity(0.08))
             }
+        }
+    }
+}
+
+private struct PanelVisibleKey: EnvironmentKey { static let defaultValue = true }
+extension EnvironmentValues {
+    /// False while the panel is ordered out, so looping animations stop.
+    var panelVisible: Bool {
+        get { self[PanelVisibleKey.self] }
+        set { self[PanelVisibleKey.self] = newValue }
     }
 }

@@ -139,5 +139,62 @@ private func check(_ condition: Bool, _ message: String) {
         model.togglePercentage() // restore the user's preference
         print("Status icon tests passed: dot ring maps 0/1/25/50/100%, template sizing, percentage toggle in quick menu")
         print("Quick menu tests passed: titles, checked preset, enable state, preset write, settings action")
+        idleCPUTests()
+    }
+
+    /// Looping indicators must not cost CPU. A SwiftUI repeatForever re-renders
+    /// the whole panel every frame, and re-arming one per loading cycle stacked
+    /// them until the hidden menu bar app pegged a core overnight.
+    static func idleCPUTests() {
+        func cpuSeconds() -> Double {
+            var usage = rusage(); getrusage(RUSAGE_SELF, &usage)
+            return Double(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) +
+                Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1e6
+        }
+        func cpuPercent(over seconds: TimeInterval) -> Double {
+            let start = cpuSeconds(); pump(seconds)
+            return (cpuSeconds() - start) / seconds * 100
+        }
+        let model = MonitorModel(client: RecordingDDC(), writesDiagnostics: false)
+        model.displays = [DisplayInfo(id: 2, uuid: "cpu", name: "BenQ EW3270U", ddc: true)]
+        model.selectedUUID = "cpu"
+        model.controls = [.brightness: ControlState(value: DDCValue(current: 60, maximum: 100)),
+                          .volume: ControlState(value: DDCValue(current: 40, maximum: 100))]
+        let panel = PanelController(model: model, actions: PanelActions())
+        panel.show(anchor: { NSRect(x: 600, y: 860, width: 20, height: 20) })
+        pump(0.5)
+        // Display sleep/wake runs discover(), flipping isLoading each time.
+        for _ in 0..<20 {
+            model.isLoading = true; pump(0.03)
+            model.isLoading = false; pump(0.03)
+        }
+        pump(0.5)
+        let open = cpuPercent(over: 2)
+        check(open < 5, "idle open panel should not use CPU after loading cycles, got \(open)%")
+        model.isLoading = true; pump(0.3)
+        let pulsing = cpuPercent(over: 2)
+        check(pulsing < 5, "loading pulse should run in Core Animation, got \(pulsing)%")
+        model.controls = [:]; pump(0.3)
+        let skeleton = cpuPercent(over: 2)
+        check(skeleton < 5, "loading skeleton should run in Core Animation, got \(skeleton)%")
+        panel.close(); pump(0.5)
+        let hidden = cpuPercent(over: 2)
+        check(hidden < 2, "hidden panel should not use CPU, got \(hidden)%")
+        // Held brightness key with the panel closed: HUD plus hidden panel updates.
+        model.isLoading = false
+        // A write in flight makes adjust() apply the cached value instead of reading first.
+        model.controls = [.brightness: ControlState(value: DDCValue(current: 20, maximum: 100), isWriting: true)]
+        model.softwareBrightness = false // hardware path; the recording client never answers
+        let hud = HUDController()
+        var shown = 0
+        model.onHUD = { shown += 1; hud.show(title: $0, percent: $1, symbol: $2, displayID: nil) }
+        let start = cpuSeconds()
+        for _ in 0..<20 { model.adjust(.brightness, by: 2); pump(0.15) }
+        pump(2)
+        let perPress = (cpuSeconds() - start) / 20 * 1000
+        check(shown == 20, "every key press should show the HUD, got \(shown)")
+        check(perPress < 20, "a brightness key press should cost little CPU, got \(perPress) ms")
+        print(String(format: "Idle CPU tests passed: open %.1f%%, pulsing %.1f%%, skeleton %.1f%%, hidden %.1f%%, key press %.1f ms",
+                     open, pulsing, skeleton, hidden, perPress))
     }
 }

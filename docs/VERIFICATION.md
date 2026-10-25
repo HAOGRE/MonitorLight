@@ -1,5 +1,28 @@
 # 验证记录 · MonitorLight 1.2.3
 
+## 2.2.2 CPU 占用修复（2026-10-25）
+
+- 现象：后台运行一夜后 CPU 100%，整机卡顿。系统 `cpu_resource.diag`（03:01，54% 平均）的热点全部在主线程 `NSHostingView.layout → AnimatorState.update → DefaultCombiningAnimation.animate → _ArrayBuffer…growForAppend`，即同一属性上叠加的动画越来越多。
+- 根因一：标题旁状态点的 `repeatForever` 脉冲挂在常驻视图上，每次 `isLoading` 变为 true 都再加一个永不结束的动画，变回 false 也停不掉。显示器每次睡眠/唤醒都会触发 `discover()`，一夜累积后面板即使隐藏也每帧重排。
+- 根因二：在 macOS 27.0.1 上，只要有任何 SwiftUI 动画在跑（哪怕是隐藏窗口里一个 6pt 圆点、无玻璃背景），进程就占满一个核。按一次亮度键时 HUD 和隐藏面板的 SwiftUI 动画约耗 130ms CPU。
+- 修复：
+  - 脉冲点与加载骨架改为 Core Animation（`LoopingLayer`），由渲染服务器驱动；仅在加载中且面板可见时插入，结束即移除。
+  - HUD 进度条改为 CALayer 隐式动画，数字不再做 SwiftUI 过渡。
+  - 面板隐藏时通过 `transaction` 关闭全部动画。
+  - 菜单栏图标仅在字形变化时重绘。
+  - 显示器无响应时重新检测改为 5→10→…→60 秒退避；屏幕变化、唤醒或打开面板时立即复位。定时器加 1 秒容差。
+- 对比（复现程序，真实面板）：
+
+  | 场景 | 修复前 | 修复后 |
+  |---|---|---|
+  | 面板隐藏，10–120 次加载循环后 | 约 100% | 0% |
+  | 面板打开，加载中 | 约 105% | 0–3% |
+  | 连续按亮度键（HUD + 隐藏面板） | 约 130 ms/次 | 约 6 ms/次 |
+  | 单次按键（含 HUD 淡入淡出） | — | 约 30 ms/次 |
+
+- 新增 `idleCPUTests`（`Tests/InteractionTests.swift`）：加载循环后面板打开/隐藏、加载脉冲、骨架、连续按键的 CPU 上限；旧代码下该测试以 103% 失败。
+- 未改动：面板打开时拖动滑块约 17%（交互期间，松手即停）；软件调光的全屏遮罩窗口需要 WindowServer 合成，属功能本身开销。
+
 ## 2.2.1 输入源标签修正（2026-10-24）
 
 2.2.0 把输入源 15 标为 DisplayPort、16 标为 USB-C，未经实体接口核对。

@@ -12,9 +12,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var screenChange: DispatchWorkItem?
     var permissionTimer: Timer?
     var refreshTimer: Timer?
+    /// Rediscovery backs off while no display answers (asleep or unplugged);
+    /// screen changes and wake reset it.
+    var discoveryInterval: TimeInterval = 5
+    var nextDiscovery = Date.distantPast
     var scrollMonitor: Any?
     var scrollAccumulator: CGFloat = 0
     var pendingCommand: ControlCommand?
+    private var statusImageKey: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -31,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel = PanelController(model: model, actions: actions)
         panel.onShow = { [weak self] in
             guard let self else { return }
+            self.discoveryInterval = 5; self.nextDiscovery = .distantPast
             self.model.refresh(reconsiderBrightness: self.model.isAutoSoftwareFallback)
             self.model.displaySettings.refresh()
             self.model.loginEnabled = SMAppService.mainApp.status == .enabled
@@ -54,19 +60,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installScrollMonitor()
         retryMediaKeys()
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.retryMediaKeys() }
+        permissionTimer?.tolerance = 1
         NotificationCenter.default.addObserver(self, selector: #selector(displaysChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(displaysChanged), name: NSWorkspace.didWakeNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(displaysChanged), name: NSWorkspace.screensDidWakeNotification, object: nil)
         model.discover()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             guard let self else { return }
-            if !self.model.ready && !self.model.isLoading { self.model.discover() }
-            else if self.panel.isShown && !self.model.hasPendingWrites {
+            if self.model.ready { self.discoveryInterval = 5 }
+            if !self.model.ready && !self.model.isLoading {
+                guard Date() >= self.nextDiscovery else { return }
+                self.model.discover()
+                self.nextDiscovery = Date().addingTimeInterval(self.discoveryInterval)
+                self.discoveryInterval = min(60, self.discoveryInterval * 2)
+            } else if self.panel.isShown && !self.model.hasPendingWrites {
                 // Recovers hardware dimming once B.I.+ or HDR is turned off on the display.
                 self.model.refresh(reconsiderBrightness: self.model.isAutoSoftwareFallback)
                 self.model.displaySettings.refresh()
             }
         }
+        refreshTimer?.tolerance = 1
         if CommandLine.arguments.contains("--show") || !UserDefaults.standard.bool(forKey: "hasLaunched") {
             UserDefaults.standard.set(true, forKey: "hasLaunched")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.showPopover() }
@@ -117,7 +130,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func updateStatus() {
         let percentage = model.ready ? model.controls[.brightness]?.value.map { Int($0.percent.rounded()) } : nil
         // The sun's disc is the gauge; with percentage on, the number sits inside it.
-        statusItem.button?.image = StatusIcon.image(percent: percentage.map(Double.init), showNumber: model.showPercentage)
+        // Redraw only when the glyph changes: this runs on every model update.
+        let imageKey = model.showPercentage ? "n\(percentage.map(String.init) ?? "-")"
+                                            : "g\(percentage == nil ? -1 : StatusIcon.litDots(for: percentage.map(Double.init)))"
+        if imageKey != statusImageKey {
+            statusImageKey = imageKey
+            statusItem.button?.image = StatusIcon.image(percent: percentage.map(Double.init), showNumber: model.showPercentage)
+        } else {
+            statusItem.button?.image?.accessibilityDescription = percentage.map { L("亮度 %d%%", $0) } ?? L("显示器亮度")
+        }
         statusItem.button?.title = ""
         statusItem.button?.appearsDisabled = !model.ready && !model.isLoading
         let name = model.selectedDisplay?.displayName ?? L("未连接显示器")
@@ -140,6 +161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     @objc func displaysChanged() {
         screenChange?.cancel()
+        discoveryInterval = 5; nextDiscovery = .distantPast
         let work = DispatchWorkItem { [weak self] in self?.model.discover() }
         screenChange = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
