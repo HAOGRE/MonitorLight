@@ -179,3 +179,15 @@ python3 scripts/smoke-test.py
   - 删除未使用的 `statusText`、`BrightnessMode.title` 及其 8 条文案。共 126 条，全部通过 `i18n.py check`。
 - 英文版“Copy Diagnostics”折行：底部按钮改为单行、允许轻微缩放，并加内边距。
 - 中英文渲染已复查；安装版为最新构建；全部测试与 smoke-test 通过。
+
+
+## 2.2.3 音量键（2026-11-03）
+
+- 修复事件监听只识别亮度键的问题：增加系统静音、音量减／增事件及普通 F10／F11／F12，复用当前所选显示器的音量和静音恢复逻辑。
+- 音量每次调节 5%，按住 Shift 为 1%；长按音量键连续调节，静音忽略重复按下。普通 F 键搭配 Command／Control／Option 时保留给其他快捷键。
+- 按亮度／音量各自的可用状态决定是否拦截：音量无需亮度可用，不支持的控制继续交给 macOS。设置开关和授权说明同步覆盖音量键，中英文 README 补充映射。
+- 新增 `Tests/KeyboardTests.swift` 并接入 `make test`：系统媒体事件经 CGEvent 转换、普通 F 键、Shift 微调、长按、按键释放、静音恢复回调、修饰键组合及按功能放行全部通过。本地化、协议、模型和控件交互检查通过；中英文设置页离屏渲染已检查。
+- 完整 `make test` 未全部通过：既有 CPU 测试的亮度键耗时约 20.4–21.0 ms／次，略高于 20 ms 阈值；单独重跑仍超限，未调整阈值。完整 Xcode 与 Command Line Tools + macOS 26.5 SDK 都复现。其余空闲 CPU 检查通过。日志保存在本机 `build/test-volume-keys.log`、`build/test-volume-keys-xcode.log`。
+- 当前 Command Line Tools 默认 macOS 27.2 SDK 缺少 SwiftUI 宏插件，默认构建失败；本次用 `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk make build` 完成构建。完整 Xcode 可以编译测试与界面。
+- 已安装 2.2.3（build 12）到 `~/Applications/MonitorLight.app`。辅助功能授权和事件监听有效，识别 BenQ EW3270U，原音量 42%。自动化合成按键没有触发全局监听，因此未将 F10／F11／F12 的实体按键、长按手感或真实按键后的硬件读回标为实测通过。
+- DMG 已通过 `hdiutil verify`，只读挂载后验证应用签名、版本，并与安装版可执行文件逐字节核对。桌面 `~/Desktop/MonitorLight-2.2.3.dmg` 与构建产物 SHA-256 一致：`1d1983538ba5dc1b8ba9b0823ee9e42c568b8b5fcc2a536eddfccd24cebfb31e`。

@@ -216,7 +216,7 @@ struct MainPage: View {
         return model.message
     }
     private var mediaKeyBanner: some View {
-        NoticeBanner(text: L("使用键盘亮度键需要辅助功能权限"), symbol: "keyboard", tint: .accentColor,
+        NoticeBanner(text: L("使用亮度键和音量键需要辅助功能权限"), symbol: "keyboard", tint: .accentColor,
                      actionTitle: L("前往设置"), action: actions.reconnectMediaKeys)
     }
     private var skeleton: some View {

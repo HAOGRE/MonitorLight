@@ -24,7 +24,7 @@ struct SettingsPage: View {
             }
 
             Module(padding: 6, spacing: 0) {
-                SwitchRow(symbol: "keyboard", tint: .gray, title: L("使用键盘亮度键"),
+                SwitchRow(symbol: "keyboard", tint: .gray, title: L("使用亮度键和音量键"),
                           detail: model.mediaKeysRequested && !model.mediaKeysEnabled ? L("需要辅助功能权限") : nil,
                           isOn: model.mediaKeysRequested) { _ in actions.toggleMediaKeys() }
                 SwitchRow(symbol: "percent", tint: .blue, title: L("显示百分比"),
@@ -42,7 +42,7 @@ struct SettingsPage: View {
                     ShortcutRow(title: L("静音 / 恢复"), keys: ["⌃", "⌥", "M"])
                     ShortcutRow(title: L("打开 / 收起面板"), keys: ["⌃", "⌥", "B"])
                 }
-                Text(L("在面板中可直接用方向键、1–3 和 M 操作；在菜单栏图标上滚动也可调节亮度。"))
+                Text(L("F10 静音或恢复，F11/F12 调节音量，按住 ⇧ 可微调。在面板中可用方向键、1–3 和 M；滚动菜单栏图标可调亮度。"))
                     .font(.system(size: 10)).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
             }
 

@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         keyboard.onVolume = { [weak self] in self?.model.adjust(.volume, by: $0) }
         keyboard.onMute = { [weak self] in self?.model.toggleMute() }
         keyboard.onToggle = { [weak self] in self?.togglePopover() }
-        keyboard.canHandleMediaKey = { [weak self] in self?.model.ready == true }
+        keyboard.canHandleMediaKey = { [weak self] feature in self?.model.controls[feature]?.value != nil }
         keyboard.onKeyboardAction = { [weak self] in self?.model.recordKeyboardAction($0) }
         model.hotkeyMessage = keyboard.register()
         model.onChange = { [weak self] in

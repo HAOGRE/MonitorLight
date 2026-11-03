@@ -10,6 +10,11 @@ xcrun swiftc -swift-version 5 -target arm64-apple-macosx14.0 \
   Sources/MonitorLight/Core/*.swift Sources/MonitorLight/System/SoftwareDimming.swift \
   Tests/ModelTests.swift -o build/model-tests -framework AppKit -framework SwiftUI -framework ServiceManagement
 build/model-tests
+xcrun swiftc -swift-version 5 -target arm64-apple-macosx14.0 \
+  Sources/MonitorLight/Core/DDCClient.swift Sources/MonitorLight/Core/Localization.swift \
+  Sources/MonitorLight/System/KeyboardController.swift Tests/KeyboardTests.swift \
+  -o build/keyboard-tests -framework AppKit -framework Carbon
+build/keyboard-tests
 # Offscreen render of the panel (light + dark) for visual review.
 UI_SOURCES=()
 while IFS= read -r file; do UI_SOURCES+=("$file"); done < <(find Sources/MonitorLight/Core Sources/MonitorLight/UI Sources/MonitorLight/System -name '*.swift' | sort)

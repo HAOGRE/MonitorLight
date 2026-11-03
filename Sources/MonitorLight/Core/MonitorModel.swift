@@ -16,7 +16,7 @@ final class MonitorModel: ObservableObject {
     @Published var hotkeyMessage: String?
     @Published var mediaKeysEnabled = false
     @Published var mediaKeysRequested = UserDefaults.standard.object(forKey: "useMediaKeys") as? Bool != false
-    @Published var mediaKeyMessage = L("正在检查亮度键…")
+    @Published var mediaKeyMessage = L("正在检查键盘亮度键和音量键…")
     private var keyboardDiagnostics: [String: Any] = [:]
     @Published var loginEnabled = SMAppService.mainApp.status == .enabled
     @Published var showPercentage = UserDefaults.standard.bool(forKey: "showPercentage")

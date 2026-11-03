@@ -15,14 +15,14 @@ A small macOS menu bar app built for the **BenQ EW3270U** (31.5″ 4K, model ID 
    ```sh
    xattr -dr com.apple.quarantine /Applications/MonitorLight.app
    ```
-3. Click the sun in the menu bar. To use the keyboard's brightness keys, allow MonitorLight under **Privacy & Security › Accessibility** when it asks.
+3. Click the sun in the menu bar. To use the keyboard's brightness and volume keys, allow MonitorLight under **Privacy & Security › Accessibility** when it asks.
 
 ## Features
 
 - **Brightness and volume** with Control Center–style sliders: drag, click or scroll. Presets for 35%, 60% and 85%, and mute that restores the previous volume.
 - **EW3270U picture settings:** picture mode, low blue light scenes (Multimedia, Web Surfing, Office, Reading), sharpness, AMA and scaling. Every value was mapped from the display's own menu and verified on the hardware.
 - **Input switching:** choose DisplayPort, USB-C, HDMI 1 or HDMI 2 from the main panel; MonitorLight reads the current input and confirms the switch over DDC/CI.
-- **Keyboard:** the Mac's brightness keys and global shortcuts, plus the arrow keys, 1–3 and M inside the panel.
+- **Keyboard:** the Mac's brightness and volume keys and global shortcuts, plus the arrow keys, 1–3 and M inside the panel.
 - **Menu bar icon:** a ring of dots shows the brightness level; turn on **Show Percentage** to show the number instead. Scroll over the icon to adjust, and right-click it for quick actions.
 - **Software dimming fallback:** when the EW3270U locks hardware brightness (B.I.+, HDR or certain picture modes), Auto mode dims with an overlay and switches back to hardware dimming once the display allows it.
 - **Liquid Glass panel** on macOS 26 and later. English and Chinese, following the system language.
@@ -41,6 +41,10 @@ A small macOS menu bar app built for the **BenQ EW3270U** (31.5″ 4K, model ID 
 | ⌃⌥ M | Mute / unmute |
 | ⌃⌥ B | Show / hide the panel |
 | Brightness keys | Brightness (requires Accessibility permission) |
+| F10 / mute key | Mute / unmute the selected display |
+| F11 / F12 / volume keys | Display volume −5% / +5% (hold ⇧ for 1%) |
+
+Enable **Brightness & Volume Keys** in Settings and grant Accessibility permission to use these keys. F10–F12 also work in standard function-key mode.
 
 Inside the panel: ↑/↓ brightness, ←/→ volume, 1–3 presets, M mute, P picture page, ⌘, settings, Esc back or close.
 
