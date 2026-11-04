@@ -47,6 +47,16 @@ private func function(_ code: Int, down: Bool = true, repeated: Bool = false,
         assert(actions == ["volume-key-up", "volume-key-down", "volume-key-up", "volume-key-down",
                            "volume-key-mute", "volume-key-mute", "brightness-key-up", "brightness-key-down"])
 
+        // External keyboards can send ordinary F1/F2 in standard function-key
+        // mode, while brightness mode sends the system-defined events above.
+        brightness = []
+        assert(keyboard.handleMediaKey(function(kVK_F1)))
+        assert(keyboard.handleMediaKey(function(kVK_F2)))
+        assert(keyboard.handleMediaKey(function(kVK_F1, repeated: true)))
+        assert(keyboard.handleMediaKey(function(kVK_F2, repeated: true, modifiers: [.shift, .function])))
+        assert(brightness == [-5, 5, -5, 1])
+        assert(Array(actions.suffix(4)) == ["brightness-key-down", "brightness-key-up", "brightness-key-down", "brightness-key-up"])
+
         volume = []
         assert(keyboard.handleMediaKey(function(kVK_F10)))
         assert(keyboard.handleMediaKey(function(kVK_F10, repeated: true)))
@@ -56,7 +66,7 @@ private func function(_ code: Int, down: Bool = true, repeated: Bool = false,
         assert(volume == [-5, 5, 1] && muteCount == 3)
         let actionCount = actions.count
         for code in [0, 1, 2, 3, 7] { assert(keyboard.handleMediaKey(media(code, down: false))) }
-        for code in [kVK_F10, kVK_F11, kVK_F12] {
+        for code in [kVK_F1, kVK_F2, kVK_F10, kVK_F11, kVK_F12] {
             assert(keyboard.handleMediaKey(function(code, down: false)))
             for modifier: NSEvent.ModifierFlags in [.command, .control, .option] {
                 assert(!keyboard.handleMediaKey(function(code, modifiers: modifier)))
@@ -74,11 +84,13 @@ private func function(_ code: Int, down: Bool = true, repeated: Bool = false,
         assert(!keyboard.handleMediaKey(function(kVK_F11)))
         available = [.volume]
         assert(!keyboard.handleMediaKey(media(2)))
+        assert(!keyboard.handleMediaKey(function(kVK_F1)))
+        assert(!keyboard.handleMediaKey(function(kVK_F2)))
         assert(keyboard.handleMediaKey(media(1))) // Volume works even without brightness.
         available = []
         assert(!keyboard.handleMediaKey(function(kVK_F10)))
         assert(!keyboard.handleMediaKey(media(1)))
         assert(muteCount == 3)
-        print("Keyboard tests passed: media keys, F10–F12, fine steps, repeats, releases, modifier shortcuts, per-feature availability")
+        print("Keyboard tests passed: media keys, F1/F2, F10–F12, fine steps, repeats, releases, modifier shortcuts, per-feature availability")
     }
 }

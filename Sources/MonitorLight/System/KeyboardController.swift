@@ -86,7 +86,7 @@ final class KeyboardController {
         }
         disableMediaKeys()
         // Apple keyboards send system-defined media events; keyboards in
-        // standard function-key mode send ordinary F10/F11/F12 events.
+        // standard function-key mode send ordinary F1/F2/F10/F11/F12 events.
         let mask = CGEventMask((1 << 14) | (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue))
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
                                          eventsOfInterest: mask, callback: { _, type, event, context in
@@ -139,6 +139,8 @@ final class KeyboardController {
             // Preserve modified function-key shortcuts used by other apps.
             guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return false }
             switch Int(event.keyCode) {
+            case kVK_F1: code = 3 // NX_KEYTYPE_BRIGHTNESS_DOWN
+            case kVK_F2: code = 2 // NX_KEYTYPE_BRIGHTNESS_UP
             case kVK_F10: code = 7 // NX_KEYTYPE_MUTE
             case kVK_F11: code = 1 // NX_KEYTYPE_SOUND_DOWN
             case kVK_F12: code = 0 // NX_KEYTYPE_SOUND_UP
