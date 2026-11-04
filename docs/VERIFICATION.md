@@ -1,5 +1,15 @@
 # 验证记录 · MonitorLight 1.2.3
 
+## Magic Keyboard 亮度专用键码诊断（2026-11-04，另一台 Mac）
+
+- 源码从 2.2.4 快进到 main 的 `a362488`（2.2.5），运行副本仅 `/Applications/MonitorLight.app`。旧版备份在本机 `build/backups/`。
+- 面板亮度滑条可调整软件遮罩。亮度能力可用；当前 BenQ EW3270U 使用自动模式的软件调光兜底，不能把没有硬件亮度写入视为键盘故障。
+- 本机签名与原安装包证书不同，首次替换后实际 AX 授权为 false；用户在系统名为“设备控制和数据访问”的页面重新授权后，AX 授权和事件监听均为 true。后续更新验证同一签名指定要求，不再更换证书。
+- 用户实测 Fn+F1/F2 可调亮度，单按 F1/F2 无效。限定亮度键的诊断随后捕获专用虚拟键码 144，`result: unrecognized-or-modified`，且亮度能力和事件监听均可用。这是已收到但未识别的事件，不能归因于没有授权或显示器写入失败。
+- 修复：普通 keyDown/keyUp 的 144 映射亮度增加，145 映射亮度减少，同时保留普通 F1/F2、系统媒体事件、Shift 微调、长按、释放与 Command/Control/Option 快捷键放行。回归测试在旧处理逻辑上失败（`KeyboardTests.swift:63`），再加入映射。
+- 使用 macOS 26.5 SDK 完整测试通过（本机 `build/test-magic-keyboard.log`），亮度键 CPU 为 14.2 ms／次；构建、签名验证通过，已覆盖原应用路径并重启。用户确认单按 F1/F2 已可用，无需 Fn。修复后实机诊断捕获 18 个亮度事件、9 次调节动作，键码 144 的结果为 `consumed`，最后动作 `brightness-key-up`，软件亮度为 80%，无调节错误；权限及监听保持有效（本机 `build/runtime-magic-keyboard-after-fix.json`）。
+- 诊断仅保留亮度候选事件的键码、类型、阶段、修饰位、时间、处理结果和亮度能力，不记录字符或其他键盘输入；写入原 `~/Library/Caches/MonitorLight/status.json`。`brightnessEventCount` 不增加表示本次监听未观察到这些候选格式；`unrecognized-or-modified` 表示未识别或保留的修饰组合；`brightness-unavailable` 表示能力不可用；`consumed` 需结合动作计数和 `controls.brightness` 的值、错误及遮罩状态判断调节结果。
+
 ## 2.2.5 普通 F1/F2 亮度键兼容
 
 - 用户确认同一把 Magic Keyboard 在当前 Mac 修改前即可调亮度，在另一台 Mac 无效，Fn+F1/F2 也无效。通过远程桌面看到另一台系统的权限页名为“设备控制和数据访问”，“光控”开关已开启；仍需在该机检查实际按键事件和应用运行状态，不能将本次兼容修复视为已确认解决其问题。

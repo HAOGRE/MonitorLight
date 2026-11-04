@@ -15,6 +15,8 @@ final class KeyboardController {
     private var tapSource: CFRunLoopSource?
     private(set) var accessibilityTrusted = false
     private(set) var mediaKeyStatus = "disabled"
+    private var brightnessEventCount = 0
+    private var lastBrightnessEvent: [String: Any] = [:]
     var mediaKeyMessage: String {
         switch mediaKeyStatus {
         case "active": return L("键盘亮度键和音量键已启用。F10 静音，F11 减小音量，F12 增加音量。")
@@ -26,7 +28,10 @@ final class KeyboardController {
     var diagnostics: [String: Any] {
         ["accessibilityTrusted": accessibilityTrusted, "mediaKeyStatus": mediaKeyStatus,
          "eventTapEnabled": eventTap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false,
-         "registeredHotkeyCount": references.count, "appPath": Bundle.main.bundlePath]
+         "registeredHotkeyCount": references.count, "appPath": Bundle.main.bundlePath,
+         "appVersion": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev",
+         "brightnessAvailable": canHandleMediaKey?(.brightness) == true,
+         "brightnessEventCount": brightnessEventCount, "lastBrightnessEvent": lastBrightnessEvent]
     }
     private let signature: OSType = 0x4d4c4954
 
@@ -124,6 +129,37 @@ final class KeyboardController {
     /// Returns true for events consumed by the display controls, including
     /// releases so macOS does not also adjust the system output volume.
     @discardableResult func handleMediaKey(_ event: NSEvent) -> Bool {
+        // Inspect only brightness keys. Never retain text or unrelated key events.
+        let isFunction = (event.type == .keyDown || event.type == .keyUp) &&
+            [UInt16(kVK_F1), UInt16(kVK_F2), 144, 145].contains(event.keyCode)
+        let mediaCode = event.type == .systemDefined ? (event.data1 >> 16) & 0xffff : -1
+        let isBrightness = isFunction || [2, 3].contains(mediaCode)
+        let consumed = processMediaKey(event)
+        if isBrightness {
+            brightnessEventCount += 1
+            let available = canHandleMediaKey?(.brightness) == true
+            let recognized = isFunction
+                ? event.modifierFlags.intersection([.command, .control, .option]).isEmpty
+                : event.subtype.rawValue == 8 && [0x0a, 0x0b].contains((event.data1 >> 8) & 0xff)
+            lastBrightnessEvent = [
+                "time": ISO8601DateFormatter().string(from: Date()),
+                "type": isFunction ? "function" : "systemDefined",
+                "code": isFunction ? Int(event.keyCode) : mediaCode,
+                "phase": event.type == .keyUp ? "up" : event.type == .keyDown ? "down" : "media",
+                "modifiers": event.modifierFlags.rawValue,
+                "brightnessAvailable": available,
+                "result": consumed ? "consumed" : "unrecognized-or-modified"
+            ]
+            if !isFunction {
+                lastBrightnessEvent["subtype"] = event.subtype.rawValue
+                lastBrightnessEvent["state"] = (event.data1 >> 8) & 0xff
+            }
+            if !consumed && recognized && !available { lastBrightnessEvent["result"] = "brightness-unavailable" }
+        }
+        return consumed
+    }
+
+    private func processMediaKey(_ event: NSEvent) -> Bool {
         let code: Int
         let pressed: Bool
         let repeated: Bool
@@ -139,8 +175,10 @@ final class KeyboardController {
             // Preserve modified function-key shortcuts used by other apps.
             guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return false }
             switch Int(event.keyCode) {
-            case kVK_F1: code = 3 // NX_KEYTYPE_BRIGHTNESS_DOWN
-            case kVK_F2: code = 2 // NX_KEYTYPE_BRIGHTNESS_UP
+            // Magic Keyboard brightness mode sends dedicated virtual keys;
+            // Fn/standard-function mode sends ordinary F1/F2 instead.
+            case kVK_F1, 145: code = 3 // NX_KEYTYPE_BRIGHTNESS_DOWN
+            case kVK_F2, 144: code = 2 // NX_KEYTYPE_BRIGHTNESS_UP
             case kVK_F10: code = 7 // NX_KEYTYPE_MUTE
             case kVK_F11: code = 1 // NX_KEYTYPE_SOUND_DOWN
             case kVK_F12: code = 0 // NX_KEYTYPE_SOUND_UP

@@ -57,6 +57,15 @@ private func function(_ code: Int, down: Bool = true, repeated: Bool = false,
         assert(brightness == [-5, 5, -5, 1])
         assert(Array(actions.suffix(4)) == ["brightness-key-down", "brightness-key-up", "brightness-key-down", "brightness-key-up"])
 
+        // Magic Keyboard brightness mode can arrive as dedicated virtual
+        // keycodes, rather than F1/F2 or system-defined media events.
+        brightness = []
+        assert(keyboard.handleMediaKey(function(145)))
+        assert(keyboard.handleMediaKey(function(144)))
+        assert(keyboard.handleMediaKey(function(145, repeated: true)))
+        assert(keyboard.handleMediaKey(function(144, modifiers: [.shift, .function])))
+        assert(brightness == [-5, 5, -5, 1])
+
         volume = []
         assert(keyboard.handleMediaKey(function(kVK_F10)))
         assert(keyboard.handleMediaKey(function(kVK_F10, repeated: true)))
@@ -66,7 +75,7 @@ private func function(_ code: Int, down: Bool = true, repeated: Bool = false,
         assert(volume == [-5, 5, 1] && muteCount == 3)
         let actionCount = actions.count
         for code in [0, 1, 2, 3, 7] { assert(keyboard.handleMediaKey(media(code, down: false))) }
-        for code in [kVK_F1, kVK_F2, kVK_F10, kVK_F11, kVK_F12] {
+        for code in [kVK_F1, kVK_F2, 144, 145, kVK_F10, kVK_F11, kVK_F12] {
             assert(keyboard.handleMediaKey(function(code, down: false)))
             for modifier: NSEvent.ModifierFlags in [.command, .control, .option] {
                 assert(!keyboard.handleMediaKey(function(code, modifiers: modifier)))
@@ -86,11 +95,23 @@ private func function(_ code: Int, down: Bool = true, repeated: Bool = false,
         assert(!keyboard.handleMediaKey(media(2)))
         assert(!keyboard.handleMediaKey(function(kVK_F1)))
         assert(!keyboard.handleMediaKey(function(kVK_F2)))
+        assert(!keyboard.handleMediaKey(function(144)))
+        assert(!keyboard.handleMediaKey(function(145)))
         assert(keyboard.handleMediaKey(media(1))) // Volume works even without brightness.
         available = []
         assert(!keyboard.handleMediaKey(function(kVK_F10)))
         assert(!keyboard.handleMediaKey(media(1)))
         assert(muteCount == 3)
-        print("Keyboard tests passed: media keys, F1/F2, F10–F12, fine steps, repeats, releases, modifier shortcuts, per-feature availability")
+        assert((keyboard.diagnostics["lastBrightnessEvent"] as? [String: Any])?["result"] as? String == "brightness-unavailable")
+        let count = keyboard.diagnostics["brightnessEventCount"] as? Int
+        assert(!keyboard.handleMediaKey(function(kVK_ANSI_A)))
+        assert(!keyboard.handleMediaKey(media(16)))
+        assert(keyboard.diagnostics["brightnessEventCount"] as? Int == count)
+        available = [.brightness]
+        assert(keyboard.handleMediaKey(function(kVK_F1)))
+        assert((keyboard.diagnostics["lastBrightnessEvent"] as? [String: Any])?["result"] as? String == "consumed")
+        assert(!keyboard.handleMediaKey(function(kVK_F2, modifiers: .command)))
+        assert((keyboard.diagnostics["lastBrightnessEvent"] as? [String: Any])?["result"] as? String == "unrecognized-or-modified")
+        print("Keyboard tests passed: media keys, F1/F2, dedicated brightness keycodes 144/145, F10–F12, fine steps, repeats, releases, modifier shortcuts, per-feature availability, brightness-only diagnostics")
     }
 }
