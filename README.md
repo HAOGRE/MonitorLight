@@ -46,6 +46,8 @@ A small macOS menu bar app built for the **BenQ EW3270U** (31.5″ 4K, model ID 
 
 Enable **Brightness & Volume Keys** in Settings and grant Accessibility permission to use these keys. F10–F12 also work in standard function-key mode.
 
+If volume is temporarily unavailable after powering the display off and on, MonitorLight retries in the background so volume keys recover without opening the menu-bar panel.
+
 Inside the panel: ↑/↓ brightness, ←/→ volume, 1–3 presets, M mute, P picture page, ⌘, settings, Esc back or close.
 
 Shortcuts and scripts can use the URL scheme:

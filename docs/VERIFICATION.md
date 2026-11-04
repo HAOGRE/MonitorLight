@@ -1,5 +1,14 @@
 # 验证记录 · MonitorLight 1.2.3
 
+## 2.2.4 显示器关机再开机后音量键恢复（2026-11-04）
+
+- 用户复现：显示器关机再开机后音量键无效，点击菜单栏图标才恢复。
+- 用假 DDC 复现同样的状态路径：开机初次探测音量失败，硬件亮度或软件亮度兜底使 `ready` 仍为 true；旧后台定时器只在 `ready == false` 时重新检测，面板关闭期间不再读取音量。打开面板触发 `refresh()` 后，音量恢复，媒体键才被接管。
+- 修复：面板关闭时也重试缺失的控制项；重试间隔从 5 秒逐步延长到最多 60 秒，恢复后停止。探测和用户写入期间不重复请求，重新检测时重置重试间隔，旧显示器的回调继续由会话版本丢弃。
+- `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk make test` 全部通过，包括新增的硬件／软件亮度下音量恢复、暂时读失败、重试间隔、旧回调测试。空闲 CPU：面板 0.0%、加载脉冲 2.8%、隐藏 0.0%；按键 6.3 ms／次。
+- 已用原本机证书构建 2.2.4（build 13），覆盖 `/Applications/MonitorLight.app` 并启动，旧版已归档备份。签名指定要求保持一致，辅助功能权限及媒体键事件监听有效，音量可读取。此次为模型回归验证，尚未在修复版上进行实体显示器断电及真实音量键复测。日志：本机 `build/test-display-recovery.log`；旧逻辑复现程序：本机 `build/ReconnectRepro.swift`；运行状态：本机 `build/runtime-display-recovery-2.2.4.json`。
+- 发布 DMG 已校验并只读挂载核对，版本和签名正确，可执行文件与安装版一致。`MonitorLight.dmg` SHA-256：`9497375fcebff825f34c6bed067cf381c32b1ab2415638a93f26ea9ca0c3eac6`。
+
 ## 2.2.2 CPU 占用修复（2026-10-25）
 
 - 现象：后台运行一夜后 CPU 100%，整机卡顿。系统 `cpu_resource.diag`（03:01，54% 平均）的热点全部在主线程 `NSHostingView.layout → AnimatorState.update → DefaultCombiningAnimation.animate → _ArrayBuffer…growForAppend`，即同一属性上叠加的动画越来越多。

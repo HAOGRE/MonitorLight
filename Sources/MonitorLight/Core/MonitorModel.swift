@@ -34,6 +34,8 @@ final class MonitorModel: ObservableObject {
     private var requests: [Feature: Int] = [:]
     private var revisions: [Feature: Int] = [:]
     private var isRefreshing = false
+    private var nextControlRecovery = Date.distantPast
+    private var controlRecoveryInterval: TimeInterval = 5
     private var pendingBrightnessRecheck = false
     private var lastVolume: [String: Double] = [:]
     private var lastRead: [Feature: Date] = [:]
@@ -98,6 +100,7 @@ final class MonitorModel: ObservableObject {
         keyboardDeltas.removeAll(); lastRead.removeAll()
         muteReadInFlight = false; pendingMute = false
         isRefreshing = false; pendingBrightnessRecheck = false
+        nextControlRecovery = .distantPast; controlRecoveryInterval = 5
         controls = [:]; message = nil; isLoading = true
         displaySettings.configure(display: nil)
     }
@@ -123,6 +126,21 @@ final class MonitorModel: ObservableObject {
             self.notify()
             self.displaySettings.configure(display: self.selectedDisplay)
         }
+    }
+    /// A waking display may answer brightness before volume (or only accept
+    /// software brightness). Readiness alone must not stop recovery of volume.
+    func recoverUnavailableControls(now: Date = Date()) {
+        guard selectedDisplay != nil, !isLoading, !isRefreshing, !hasPendingWrites else { return }
+        guard Feature.allCases.contains(where: { controls[$0]?.value == nil }) else {
+            nextControlRecovery = .distantPast; controlRecoveryInterval = 5
+            return
+        }
+        guard now >= nextControlRecovery else { return }
+        // Unsupported controls also remain unavailable: back off instead of
+        // continuously probing displays that have no speakers.
+        nextControlRecovery = now.addingTimeInterval(controlRecoveryInterval)
+        controlRecoveryInterval = min(60, controlRecoveryInterval * 2)
+        refresh()
     }
     // Refresh read-only state when opening the popover, without overwriting a
     // slider the user has touched since this request began.

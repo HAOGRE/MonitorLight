@@ -77,6 +77,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // Recovers hardware dimming once B.I.+ or HDR is turned off on the display.
                 self.model.refresh(reconsiderBrightness: self.model.isAutoSoftwareFallback)
                 self.model.displaySettings.refresh()
+            } else {
+                self.model.recoverUnavailableControls()
             }
         }
         refreshTimer?.tolerance = 1

@@ -292,6 +292,68 @@ func probe(_ brightness: Int = 70) -> [String: Any] {
         assert(!locked.softwareBrightness && locked.controls[.brightness]?.value?.current == 70 && lockShade.levels.isEmpty)
         assert(lockClient.calls.isEmpty) // recovery is read-only
         print("Brightness lock recovery tests passed: stays on overlay while locked, returns to hardware when unlocked, no writes")
+
+        // Power-on probes can fail for volume while brightness is already
+        // usable. Closed-panel recovery must not depend on brightness readiness.
+        for software in [false, true] {
+            let wakeClient = FakeDDC(), wakeShade = FakeDimming()
+            let waking = MonitorModel(client: wakeClient, writesDiagnostics: false, dimming: wakeShade)
+            let uuid = "test-wake-volume-\(software)"
+            let preference = "brightnessMode.\(uuid)"
+            UserDefaults.standard.removeObject(forKey: preference)
+            defer { UserDefaults.standard.removeObject(forKey: preference) }
+            let unavailable: [String: Any] = [
+                "brightness": software ? ["error": "display waking"] : ["current": 70, "maximum": 100],
+                "volume": ["error": "display waking"]
+            ]
+            let recovered: [String: Any] = [
+                "brightness": ["current": 70, "maximum": 100],
+                "volume": ["current": 40, "maximum": 100]
+            ]
+            waking.discover()
+            wakeClient.reply([["id": 99995, "uuid": uuid, "name": "Test Display", "ddc": true]])
+            waking.recoverUnavailableControls() // initial probe still pending
+            assert(wakeClient.calls.count == 1)
+            wakeClient.reply(unavailable)
+            assert(waking.ready && waking.controls[.volume]?.value == nil)
+            assert(waking.softwareBrightness == software)
+            let start = Date(timeIntervalSinceReferenceDate: 1000)
+            waking.recoverUnavailableControls(now: start)
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(100)) // no overlapping probe
+            assert(wakeClient.calls.count == 1 && wakeClient.calls[0].0 == ["probe", uuid])
+            wakeClient.reply(unavailable)
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(4))
+            assert(wakeClient.calls.isEmpty)
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(5))
+            wakeClient.fail() // transport failure also keeps recovery alive
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(14))
+            assert(wakeClient.calls.isEmpty)
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(15))
+            wakeClient.reply(recovered)
+            assert(waking.controls[.volume]?.value?.current == 40)
+            assert(waking.softwareBrightness == software) // recovery preserves the overlay
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(100))
+            assert(wakeClient.calls.isEmpty) // healthy displays are not polled
+            waking.adjust(.volume, by: -5)
+            pump()
+            assert(wakeClient.calls.count == 1 && wakeClient.calls[0].0 == ["set", uuid, "volume", "35"])
+            wakeClient.reply(["current": 35, "maximum": 100])
+
+            // A later reconnect resets backoff. Ignore its old read if the
+            // display goes away again before recovery completes.
+            waking.discover()
+            wakeClient.reply([["id": 99995, "uuid": uuid, "name": "Test Display", "ddc": true]])
+            wakeClient.reply(unavailable)
+            waking.recoverUnavailableControls(now: start)
+            assert(wakeClient.calls.count == 1)
+            waking.discover()
+            wakeClient.reply([], at: 1)
+            wakeClient.reply(recovered)
+            assert(!waking.ready && waking.controls[.volume]?.value == nil)
+            waking.recoverUnavailableControls(now: start.addingTimeInterval(100))
+            assert(wakeClient.calls.isEmpty)
+        }
+        print("Power-on volume recovery tests passed: hardware/software brightness, closed panel, retry backoff, transport failure, no overlapping probes, stale disconnect replies")
         print("Slider math tests passed: relative drag, click jump, fill cap, detents, wheel and trackpad scrolling")
         print("Model tests passed: coalescing, read/write races, failure rollback, display switching, mute restore, bounds, disconnect")
         print("Display setting tests passed: raw mode values, rollback, stale display replies, ambiguous and unrecognized mode labels")
